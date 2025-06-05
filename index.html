@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Dados Penitenciários</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 15px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            transition: background-color 0.2s ease;
+        }
+
+        tr:hover td {
+            background-color: #f8f9fa;
+        }
+
+        .editable {
+            background: transparent;
+            border: 1px solid transparent;
+            width: 100%;
+            text-align: center;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .editable:focus {
+            border-color: #4CAF50;
+            outline: none;
+            background: #f0f8ff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 1200px; /* Aumentado para melhor visualização em desktop */
+            max-height: 85vh; /* Limita altura a 85% da altura da viewport */
+            overflow-y: auto; /* Adiciona scroll vertical */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        .form-group select {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .form-group select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        .form-group select:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #f44336;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        /* Mobile Responsiveness Improvements */
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 2% auto;
+                max-height: 90vh;
+                padding: 20px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+            
+            .btn {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+            
+            .table-container {
+                padding: 15px;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            th, td {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+        }
+
+        /* Adicione estes estilos CSS */
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+.modal-buttons .btn {
+    min-width: 140px;
+    flex: 0 1 auto;
+}
+
+@media (max-width: 768px) {
+    .modal-buttons {
+        flex-direction: column;
+        gap: 15px;
+        padding: 0 15px;
+        margin-bottom: 20px;
+    }
+
+    .modal-buttons .btn {
+        width: 100%;
+        margin: 0 !important;
+    }
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    padding: 20px;
+    min-height: 600px; /* Altura mínima para garantir que os gráficos sejam bem visíveis */
+}
+
+.chart-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 300px; /* Altura mínima para cada gráfico */
+}
+
+@media (max-width: 768px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ Sistema de Gestão Penitenciária</h1>
+            <p>Controle e monitoramento da população penal por província</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalEstabelecimentos">0</div>
+                <div class="stat-label">Estabelecimentos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPopulacao">0</div>
+                <div class="stat-label">População Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="capacidadeTotal">0</div>
+                <div class="stat-label">Capacidade Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lotacaoMedia">0</div>
+                <div class="stat-label">Excesso Médio</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="addRow()">➕ Adicionar Estabelecimento</button>
+            <button class="btn btn-secondary" onclick="exportCSV()">📊 Exportar CSV</button>
+            <button class="btn btn-secondary" onclick="exportPDF()">📄 Exportar PDF</button>
+            <button class="btn btn-secondary" onclick="showAnalytics()">📈 Análise Gráfica</button>
+            <button class="btn btn-danger" onclick="clearData()">🗑️ Limpar Dados</button>
+        </div>
+
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th rowspan="3">N/O</th>
+                        <th rowspan="3">PROVÍNCIAS</th>
+                        <th rowspan="3">ESTABELECIMENTO</th>
+                        <th rowspan="3">TOTAL ANTERIOR</th>
+                        <th colspan="9">DISTRIBUIÇÃO DA POPULAÇÃO PENAL POR FAMÍLIA CRIMINAL</th>
+                        <th rowspan="3">SUB-TOTAL PRISÃO PREVENTIVA</th>
+                        <th rowspan="3">SUB-TOTAL CONDENADOS</th>
+                        <th rowspan="3">TOTAL ACTUAL</th>
+                        <th rowspan="3">DIFERENÇA</th>
+                        <th rowspan="3">ENTRADA</th>
+                        <th rowspan="3">SAÍDA</th>
+                        <th rowspan="3">CAPACIDADE EFECTIVA</th>
+                        <th rowspan="3">LOTAÇÃO</th>
+                        <th rowspan="3">AÇÕES</th>
+                    </tr>
+                    <tr>
+                        <th colspan="3">BLOCO A - Crime contra pessoa</th>
+                        <th colspan="3">BLOCO B - Crime contra propriedade</th>
+                        <th colspan="3">BLOCO C - Crime contra ordem pública</th>
+                    </tr>
+                    <tr>
+                        <th>DET.</th>
+                        <th>Cond.</th>
+                        <th>Total</th>
+                        <th>DET.</th>
+                        <th>Cond.</th>
+                        <th>Total</th>
+                        <th>DET.</th>
+                        <th>Cond.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar/editar -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Adicionar Estabelecimento</h2>
+            <form id="dataForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Província:</label>
+                        <select id="provincia" required>
+                            <option value="">Selecione uma província</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Estabelecimento:</label>
+                        <select id="estabelecimento" required disabled>
+                            <option value="">Selecione primeiro uma província</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Anterior:</label>
+                        <input type="number" id="totalAnterior" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco A - DET:</label>
+                        <input type="number" id="blocoA_det" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco A - Cond:</label>
+                        <input type="number" id="blocoA_cond" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco B - DET:</label>
+                        <input type="number" id="blocoB_det" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco B - Cond:</label>
+                        <input type="number" id="blocoB_cond" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco C - DET:</label>
+                        <input type="number" id="blocoC_det" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Bloco C - Cond:</label>
+                        <input type="number" id="blocoC_cond" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Entrada:</label>
+                        <input type="number" id="entrada" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Saída:</label>
+                        <input type="number" id="saida" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Capacidade Efectiva:</label>
+                        <input type="number" id="capacidade" min="0">
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Análise Gráfica -->
+    <div id="analyticsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAnalyticsModal()">&times;</span>
+            <h2>Análise Gráfica</h2>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="genderChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="occupancyChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="crimeTypeChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="detentionStatusChart"></canvas>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeAnalyticsModal()">❌ Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let editingIndex = -1;
+        let charts = {
+    genderChart: null,
+    occupancyChart: null,
+    crimeTypeChart: null,
+    detentionStatusChart: null
+};
+
+         // Dados iniciais baseados no JSON fornecido
+         const initialData = [
+            {
+                provincia: "Luanda",
+                estabelecimento: "Estab. Penit.de Luanda/CCL",
+                totalAnterior: 863,
+                blocoA_det: 123,
+                blocoA_cond: 213,
+                blocoB_det: 205,
+                blocoB_cond: 226,
+                blocoC_det: 58,
+                blocoC_cond: 36,
+                entrada: 0,
+                saida: 2,
+                capacidade: 800
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Hosp. Penit. de S.Paulo",
+                totalAnterior: 265,
+                blocoA_det: 96,
+                blocoA_cond: 18,
+                blocoB_det: 84,
+                blocoB_cond: 17,
+                blocoC_det: 34,
+                blocoC_cond: 16,
+                entrada: 2,
+                saida: 2,
+                capacidade: 200
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Sector Fem. de S.Paulo",
+                totalAnterior: 4,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 2,
+                blocoB_cond: 1,
+                blocoC_det: 0,
+                blocoC_cond: 1,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Estab. Penit. de Viana",
+                totalAnterior: 4946,
+                blocoA_det: 1181,
+                blocoA_cond: 239,
+                blocoB_det: 1822,
+                blocoB_cond: 258,
+                blocoC_det: 1242,
+                blocoC_cond: 167,
+                entrada: 5,
+                saida: 42,
+                capacidade: 2384
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Estab. Penit. Fem. Viana",
+                totalAnterior: 307,
+                blocoA_det: 50,
+                blocoA_cond: 152,
+                blocoB_det: 29,
+                blocoB_cond: 24,
+                blocoC_det: 38,
+                blocoC_cond: 16,
+                entrada: 2,
+                saida: 0,
+                capacidade: 450
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Hosp. Psiq. Penitenciário",
+                totalAnterior: 29,
+                blocoA_det: 9,
+                blocoA_cond: 1,
+                blocoB_det: 9,
+                blocoB_cond: 1,
+                blocoC_det: 8,
+                blocoC_cond: 1,
+                entrada: 0,
+                saida: 0,
+                capacidade: 50
+            },
+            {
+                provincia: "Luanda",
+                estabelecimento: "Sector Fem. Hosp. Psiq.",
+                totalAnterior: 8,
+                blocoA_det: 2,
+                blocoA_cond: 1,
+                blocoB_det: 2,
+                blocoB_cond: 0,
+                blocoC_det: 3,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            	   {
+                provincia: "Icolo e Bengo",
+                estabelecimento: "Estab. Penit. de Kakila",
+                totalAnterior: 257,
+                blocoA_det: 7,
+                blocoA_cond: 14,
+                blocoB_det: 100,
+                blocoB_cond: 162,
+                blocoC_det: 214,
+                blocoC_cond: 1276,
+                entrada: 0,
+                saida: 3,
+                capacidade: 1059
+            },
+            {
+                provincia: "Icolo e Bengo",
+                estabelecimento: "Est. Penit. de Calomboloca",
+                totalAnterior: 257,
+                blocoA_det: 0,
+                blocoA_cond: 217,
+                blocoB_det: 100,
+                blocoB_cond: 262,
+                blocoC_det: 214,
+                blocoC_cond: 1490,
+                entrada: 0,
+                saida: 3,
+                capacidade: 2559
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Estab. Penit. de Cavaco",
+                totalAnterior: 8,
+                blocoA_det: 9,
+                blocoA_cond: 0,
+                blocoB_det: 3,
+                blocoB_cond: 3,
+                blocoC_det: 14,
+                blocoC_cond: 5,
+                entrada: 19,
+                saida: 15,
+                capacidade: 1738
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Estab. Fem. de Cavaco",
+                totalAnterior: 254,
+                blocoA_det: 8,
+                blocoA_cond: 14,
+                blocoB_det: 6,
+                blocoB_cond: 18,
+                blocoC_det: 19,
+                blocoC_cond: 20,
+                entrada: 26,
+                saida: 62,
+                capacidade: 1003
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Estab. Penit. Lobito",
+                totalAnterior: 268,
+                blocoA_det: 10,
+                blocoA_cond: 0,
+                blocoB_det: 3,
+                blocoB_cond: 3,
+                blocoC_det: 9,
+                blocoC_cond: 32,
+                entrada: 41,
+                saida: 1,
+                capacidade: 1754
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Estab. Penit. Cubal",
+                totalAnterior: 350,
+                blocoA_det: 11,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 5,
+                blocoC_cond: 12,
+                entrada: 17,
+                saida: 20,
+                capacidade: 1500
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Sector Fem. do Cubal",
+                totalAnterior: 426,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Benguela",
+                estabelecimento: "Estab. Penit. Ganda",
+                totalAnterior: 621,
+                blocoA_det: 12,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 4,
+                blocoC_cond: 0,
+                entrada: 4,
+                saida: 5,
+                capacidade: 1738
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Estab. Penit. do Sumbe",
+                totalAnterior: 849,
+                blocoA_det: 0,
+                blocoA_cond: 13,
+                blocoB_det: 67,
+                blocoB_cond: 5,
+                blocoC_det: 0,
+                blocoC_cond: 1,
+                entrada: 3,
+                saida: 4,
+                capacidade: 205
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Sector Fem. do Sumbe",
+                totalAnterior: 849,
+                blocoA_det: 15,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Estab. Penit. de Gabela",
+                totalAnterior: 90,
+                blocoA_det: 37,
+                blocoA_cond: 14,
+                blocoB_det: 9,
+                blocoB_cond: 20,
+                blocoC_det: 20,
+                blocoC_cond: 10,
+                entrada: 10,
+                saida: 53,
+                capacidade: 21
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Sector Fem. Da Gabela",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Estab.Penit. de Cassosso",
+                totalAnterior: 596,
+                blocoA_det: 0,
+                blocoA_cond: 15,
+                blocoB_det: 103,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 218,
+                entrada: 275,
+                saida: 0,
+                capacidade: 680
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Estab. Fem. de Cassosso",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cuanza Sul",
+                estabelecimento: "Centro Penit. p/Jovens",
+                totalAnterior: 348,
+                blocoA_det: 70,
+                blocoA_cond: 16,
+                blocoB_det: 89,
+                blocoB_cond: 22,
+                blocoC_det: 25,
+                blocoC_cond: 100,
+                entrada: 89,
+                saida: 23,
+                capacidade: 388
+            },
+            {
+                provincia: "Namibe",
+                estabelecimento: "Estab. Penit. do Namibe",
+                totalAnterior: 557,
+                blocoA_det: 56,
+                blocoA_cond: 3,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 2,
+                blocoC_cond: 4,
+                entrada: 3,
+                saida: 6,
+                capacidade: 350
+            },
+            {
+                provincia: "Namibe",
+                estabelecimento: "Sector Fem. do Namibe",
+                totalAnterior: 11,
+                blocoA_det: 2,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 2,
+                blocoC_cond: 9,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Namibe",
+                estabelecimento: "Estab. Penit. do Bentiaba",
+                totalAnterior: 753,
+                blocoA_det: 0,
+                blocoA_cond: 18,
+                blocoB_det: 268,
+                blocoB_cond: 222,
+                blocoC_det: 263,
+                blocoC_cond: 0,
+                entrada: 222,
+                saida: 263,
+                capacidade: 1200
+            },
+            {
+                provincia: "Zaire",
+                estabelecimento: "Estab. Penit. de M'B.Congo",
+                totalAnterior: 19,
+                blocoA_det: 5,
+                blocoA_cond: 1,
+                blocoB_det: 1,
+                blocoB_cond: 5,
+                blocoC_det: 6,
+                blocoC_cond: 5,
+                entrada: 1,
+                saida: 6,
+                capacidade: 14
+            },
+            {
+                provincia: "Zaire",
+                estabelecimento: "Sector Fem. de M'B.Congo",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Zaire",
+                estabelecimento: "Estab. Penit. do Soyo",
+                totalAnterior: 20,
+                blocoA_det: 56,
+                blocoA_cond: 34,
+                blocoB_det: 35,
+                blocoB_cond: 80,
+                blocoC_det: 93,
+                blocoC_cond: 93,
+                entrada: 37,
+                saida: 114,
+                capacidade: 194
+            },
+            {
+                provincia: "Zaire",
+                estabelecimento: "Sector Fem. do Soyo",
+                totalAnterior: 0,
+                blocoA_det: 3,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 4,
+                blocoC_det: 4,
+                blocoC_cond: 2,
+                entrada: 1,
+                saida: 4,
+                capacidade: 9
+            },
+            {
+                provincia: "Malanje",
+                estabelecimento: "Estab. Penit. de Malanje",
+                totalAnterior: 21,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Malanje",
+                estabelecimento: "Sector Fem. de Malanje",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Malanje",
+                estabelecimento: "Estabe. Penit. Fem.de Cacuso",
+                totalAnterior: 22,
+                blocoA_det: 1,
+                blocoA_cond: 0,
+                blocoB_det: 2,
+                blocoB_cond: 2,
+                blocoC_det: 6,
+                blocoC_cond: 2,
+                entrada: 3,
+                saida: 2,
+                capacidade: 8
+            },
+            {
+                provincia: "Malanje",
+                estabelecimento: "Estab.Penit. da Damba",
+                totalAnterior: 23,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 289,
+                blocoC_det: 422,
+                blocoC_cond: 324,
+                entrada: 289,
+                saida: 324,
+                capacidade: 422
+            },
+            {
+                provincia: "Bié",
+                estabelecimento: "Estab. Penit. do Kuito",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Bié",
+                estabelecimento: "Sector Fem. do Bié",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Bié",
+                estabelecimento: "Estab. Penit. do Kapolo",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 25,
+                blocoB_cond: 17,
+                blocoC_det: 0,
+                blocoC_cond: 25,
+                entrada: 0,
+                saida: 63,
+                capacidade: 250
+            },
+            {
+                provincia: "Cunene",
+                estabelecimento: "Estab. Penit. do Cunene",
+                totalAnterior: 546,
+                blocoA_det: 26,
+                blocoA_cond: 139,
+                blocoB_det: 77,
+                blocoB_cond: 216,
+                blocoC_det: 142,
+                blocoC_cond: 216,
+                entrada: 399,
+                saida: 1300,
+                capacidade: 1500
+            },
+            {
+                provincia: "Cunene",
+                estabelecimento: "Sector Fem do Cunene",
+                totalAnterior: 2,
+                blocoA_det: 0,
+                blocoA_cond: 1,
+                blocoB_det: 3,
+                blocoB_cond: 4,
+                blocoC_det: 3,
+                blocoC_cond: 5,
+                entrada: 11,
+                saida: 16,
+                capacidade: 0
+            },
+            {
+                provincia: "Huambo",
+                estabelecimento: "Estab.Penit. do Cambiote",
+                totalAnterior: 290,
+                blocoA_det: 27,
+                blocoA_cond: 32,
+                blocoB_det: 181,
+                blocoB_cond: 213,
+                blocoC_det: 298,
+                blocoC_cond: 215,
+                entrada: 940,
+                saida: 1477,
+                capacidade: 820
+            },
+            {
+                provincia: "Huambo",
+                estabelecimento: "Sector Fem. do Cambiote",
+                totalAnterior: 5,
+                blocoA_det: 0,
+                blocoA_cond: 3,
+                blocoB_det: 9,
+                blocoB_cond: 12,
+                blocoC_det: 10,
+                blocoC_cond: 3,
+                entrada: 27,
+                saida: 38,
+                capacidade: 0
+            },
+            {
+                provincia: "Huambo",
+                estabelecimento: "Estab. Penit. do Huambo",
+                totalAnterior: 0,
+                blocoA_det: 28,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 120
+            },
+            {
+                provincia: "Cabinda",
+                estabelecimento: "Estab. Penit. do Yabi",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cabinda",
+                estabelecimento: "Sector Fem. do Yabi",
+                totalAnterior: 1,
+                blocoA_det: 1,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 1,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cabinda",
+                estabelecimento: "Cadeia Civil",
+                totalAnterior: 20,
+                blocoA_det: 17,
+                blocoA_cond: 30,
+                blocoB_det: 21,
+                blocoB_cond: 18,
+                blocoC_det: 41,
+                blocoC_cond: 39,
+                entrada: 22,
+                saida: 55,
+                capacidade: 25
+            },
+            {
+                provincia: "Huíla",
+                estabelecimento: "Estab. Penit. do Lubango",
+                totalAnterior: 443,
+                blocoA_det: 280,
+                blocoA_cond: 31,
+                blocoB_det: 59,
+                blocoB_cond: 280,
+                blocoC_det: 584,
+                blocoC_cond: 339,
+                entrada: 928,
+                saida: 1003,
+                capacidade: 245
+            },
+            {
+                provincia: "Huíla",
+                estabelecimento: "Estab. Fem. do Lubango",
+                totalAnterior: 11,
+                blocoA_det: 10,
+                blocoA_cond: 32,
+                blocoB_det: 6,
+                blocoB_cond: 11,
+                blocoC_det: 17,
+                blocoC_cond: 17,
+                entrada: 34,
+                saida: 32,
+                capacidade: 8
+            },
+            {
+                provincia: "Uíge",
+                estabelecimento: "Estab. Penit. do Uíge",
+                totalAnterior: 2,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Uíge",
+                estabelecimento: "Sector Fem. do Uíge",
+                totalAnterior: 33,
+                blocoA_det: 2,
+                blocoA_cond: 6,
+                blocoB_det: 4,
+                blocoB_cond: 0,
+                blocoC_det: 4,
+                blocoC_cond: 15,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Uíge",
+                estabelecimento: "Estab. Penit. do Kindoki",
+                totalAnterior: 226,
+                blocoA_det: 161,
+                blocoA_cond: 161,
+                blocoB_det: 34,
+                blocoB_cond: 116,
+                blocoC_det: 0,
+                blocoC_cond: 116,
+                entrada: 0,
+                saida: 0,
+                capacidade: 650
+            },
+            {
+                provincia: "Uíge",
+                estabelecimento: "Sector Fem. Do Kindoki",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+
+ 	         },
+             {
+                provincia: "Lunda Sul",
+                estabelecimento: "Estab. Pent. de Luzia",
+                totalAnterior: 50,
+                blocoA_det: 11,
+                blocoA_cond: 12,
+                blocoB_det: 2,
+                blocoB_cond: 2,
+                blocoC_det: 13,
+                blocoC_cond: 14,
+                entrada: 5,
+                saida: 22,
+                capacidade: 50
+            },
+            {
+                provincia: "Lunda Sul",
+                estabelecimento: "Sector Fem. de Luzia",
+                totalAnterior: 50,
+                blocoA_det: 11,
+                blocoA_cond: 12,
+                blocoB_det: 2,
+                blocoB_cond: 2,
+                blocoC_det: 13,
+                blocoC_cond: 14,
+                entrada: 5,
+                saida: 22,
+                capacidade: 50
+            },
+            {
+                provincia: "Lunda Sul",
+                estabelecimento: "Estab.Penit. da Lunda-Sul",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 350
+            },
+            {
+                provincia: "Cuanza Norte",
+                estabelecimento: "Estab. Penit. do C.Norte",
+                totalAnterior: 0,
+                blocoA_det: 1,
+                blocoA_cond: 1,
+                blocoB_det: 1,
+                blocoB_cond: 2,
+                blocoC_det: 2,
+                blocoC_cond: 1,
+                entrada: 1,
+                saida: 2,
+                capacidade: 7
+            },
+            {
+                provincia: "Cuanza Norte",
+                estabelecimento: "Sector Fem. C.Norte",
+                totalAnterior: 0,
+                blocoA_det: 1,
+                blocoA_cond: 1,
+                blocoB_det: 1,
+                blocoB_cond: 2,
+                blocoC_det: 2,
+                blocoC_cond: 1,
+                entrada: 1,
+                saida: 2,
+                capacidade: 7
+            },
+            {
+                provincia: "Lunda Norte",
+                estabelecimento: "Estab.Penit. da L-Norte",
+                totalAnterior: 101,
+                blocoA_det: 88,
+                blocoA_cond: 38,
+                blocoB_det: 106,
+                blocoB_cond: 189,
+                blocoC_det: 151,
+                blocoC_cond: 119,
+                entrada: 127,
+                saida: 225,
+                capacidade: 347
+            },
+            {
+                provincia: "Lunda Norte",
+                estabelecimento: "Sector Fem. L.Norte",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 1,
+                blocoB_det: 2,
+                blocoB_cond: 1,
+                blocoC_det: 1,
+                blocoC_cond: 2,
+                entrada: 0,
+                saida: 4,
+                capacidade: 2
+            },
+	        {
+                provincia: "Bengo",
+                estabelecimento: "Estab. Penit. do Bengo",
+                totalAnterior: 1009,
+                blocoA_det: 24,
+                blocoA_cond: 39,
+                blocoB_det: 64,
+                blocoB_cond: 134,
+                blocoC_det: 160,
+                blocoC_cond: 222,
+                entrada: 7,
+                saida: 0,
+                capacidade: 1068
+            },
+            {
+                provincia: "Bengo",
+                estabelecimento: "Sector Fem. do Bengo",
+                totalAnterior: 7,
+                blocoA_det: 2,
+                blocoA_cond: 0,
+                blocoB_det: 1,
+                blocoB_cond: 3,
+                blocoC_det: 0,
+                blocoC_cond: 6,
+                entrada: 0,
+                saida: 7,
+                capacidade: 0
+            },
+	        {
+                provincia: "Cubango",
+                estabelecimento: "Estab. Penit. do Menongue",
+                totalAnterior: 90,
+                blocoA_det: 3,
+                blocoA_cond: 2,
+                blocoB_det: 1,
+                blocoB_cond: 2,
+                blocoC_det: 1,
+                blocoC_cond: 1,
+                entrada: 4,
+                saida: 3,
+                capacidade: 10
+            },
+            {
+                provincia: "Cubango",
+                estabelecimento: "Sector Fem. do K.Kubango",
+                totalAnterior: 3,
+                blocoA_det: 2,
+                blocoA_cond: 1,
+                blocoB_det: 2,
+                blocoB_cond: 1,
+                blocoC_det: 1,
+                blocoC_cond: 4,
+                entrada: 3,
+                saida: 6,
+                capacidade: 10
+            },
+            {
+                provincia: "Cubango",
+                estabelecimento: "Estab. Penit. de Mavinga",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+            {
+                provincia: "Cubango",
+                estabelecimento: "Estab. Penit. de K. Kuanavale",
+                totalAnterior: 41,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 10,
+                blocoB_cond: 9,
+                blocoC_det: 9,
+                blocoC_cond: 9,
+                entrada: 10,
+                saida: 0,
+                capacidade: 28
+            },
+	        {
+                provincia: "Cuando",
+                estabelecimento: "",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            },
+	        {
+                provincia: "Moxico",
+                estabelecimento: "Estab. Penit. do Moxico",
+                totalAnterior: 1,
+                blocoA_det: 2,
+                blocoA_cond: 1,
+                blocoB_det: 3,
+                blocoB_cond: 4,
+                blocoC_det: 5,
+                blocoC_cond: 0,
+                entrada: 2,
+                saida: 3,
+                capacidade: 1
+            },
+            {
+                provincia: "Moxico",
+                estabelecimento: "Sector Fem. do Moxico",
+                totalAnterior: 5,
+                blocoA_det: 9,
+                blocoA_cond: 9,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 9
+            },
+            {
+                provincia: "Moxico",
+                estabelecimento: "Estab. Penit. Do Boma",
+                totalAnterior: 54,
+                blocoA_det: 35,
+                blocoA_cond: 80,
+                blocoB_det: 0,
+                blocoB_cond: 43,
+                blocoC_det: 169,
+                blocoC_cond: 35,
+                entrada: 0,
+                saida: 0,
+                capacidade: 54
+            },
+	        {
+                provincia: "Moxico Leste",
+                estabelecimento: "",
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            }	 				        
+        ];
+
+        // Carregar dados iniciais
+        data = [...initialData];
+
+        const estabelecimentosPorProvincia = {
+            "Luanda": ["Estab. Penit.de Luanda/CCL", "Hosp. Penit. de S.Paulo", "Sector Fem. de S.Paulo", "Estab. Penit. de Viana", "Estab. Penit. Fem. Viana", "Hosp. Psiq. Penitenciário", "Sector Fem. Hosp. Psiq."],
+            "Icolo e Bengo": ["Estab. Penit. de Kakila", "Est. Penit. de Calomboloca"],
+            "Benguela": ["Estab. Penit. de Cavaco", "Estab. Fem. de Cavaco", "Estab. Penit. Lobito", "Estab. Penit. Cubal", "Sector Fem. do Cubal", "Estab. Penit. Ganda"],
+            "Cuanza Sul": ["Estab. Penit. do Sumbe", "Sector Fem. do Sumbe", "Estab. Penit. de Gabela", "Sector Fem. Da Gabela", "Estab.Penit. de Cassosso", "Estab. Fem. de Cassosso", "Centro Penit. p/Jovens"],
+            "Namibe": ["Estab. Penit. do Namibe", "Sector Fem. do Namibe", "Estab. Penit. do Bentiaba"],
+            "Zaire": ["Estab. Penit. de M'B.Congo", "Sector Fem. de M'B.Congo", "Estab. Penit. do Soyo", "Sector Fem. do Soyo"],
+            "Malanje": ["Estab. Penit. de Malanje", "Sector Fem. de Malanje", "Estabe. Penit. Fem.de Cacuso", "Estab.Penit. da Damba"],
+            "Bié": ["Estab. Penit. do Kuito", "Sector Fem. do Bié", "Estab. Penit. do Kapolo"],
+            "Cunene": ["Estab. Penit. do Cunene", "Sector Fem do Cunene"],
+            "Huambo": ["Estab.Penit. do Cambiote", "Sector Fem. do Cambiote", "Estab. Penit. do Huambo"],
+            "Cabinda": ["Estab. Penit. do Yabi", "Sector Fem. do Yabi", "Cadeia Civil"],
+            "Huíla": ["Estab. Penit. do Lubango", "Estab. Fem. do Lubango"],
+            "Uíge": ["Estab. Penit. do Uíge", "Sector Fem. do Uíge", "Estab. Penit. do Kindoki", "Sector Fem. Do Kindoki"],
+            "Lunda Sul": ["Estab. Pent. de Luzia", "Sector Fem. de Luzia", "Estab.Penit. da Lunda-Sul"],
+            "Cuanza Norte": ["Estab. Penit. do C.Norte", "Sector Fem. C.Norte"],
+            "Lunda Norte": ["Estab.Penit. da L-Norte", "Sector Fem. L.Norte"],
+            "Bengo": ["Estab. Penit. do Bengo", "Sector Fem. do Bengo"],
+            "Cubango": ["Estab. Penit. do Menongue", "Sector Fem. do K.Kubango", "Estab. Penit. de Mavinga", "Estab. Penit. de K. Kuanavale"],
+            "Cuando": [""],
+            "Moxico": ["Estab. Penit. do Moxico", "Sector Fem. do Moxico", "Estab. Penit. Do Boma"],
+            "Moxico Leste": [""]
+        };
+
+        function calculateTotals(item) {
+            const blocoA_total = (item.blocoA_det || 0) + (item.blocoA_cond || 0);
+            const blocoB_total = (item.blocoB_det || 0) + (item.blocoB_cond || 0);
+            const blocoC_total = (item.blocoC_det || 0) + (item.blocoC_cond || 0);
+            
+            // Sub-totais
+            const subTotalPrisaoPreventiva = (item.blocoA_det || 0) + (item.blocoB_det || 0) + (item.blocoC_det || 0);
+            const subTotalCondenados = (item.blocoA_cond || 0) + (item.blocoB_cond || 0) + (item.blocoC_cond || 0);
+            const totalAtual = subTotalPrisaoPreventiva + subTotalCondenados;
+            
+            const diferenca = totalAtual - (item.totalAnterior || 0);
+            const lotacao = totalAtual - (item.capacidade || 0);
+
+            return {
+                ...item,
+                blocoA_total,
+                blocoB_total,
+                blocoC_total,
+                subTotalPrisaoPreventiva,
+                subTotalCondenados,
+                totalAtual,
+                diferenca,
+                lotacao
+            };
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            // Initialize totals for gender
+            let maleTotals = {
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            };
+
+            let femaleTotals = {
+                totalAnterior: 0,
+                blocoA_det: 0,
+                blocoA_cond: 0,
+                blocoB_det: 0,
+                blocoB_cond: 0,
+                blocoC_det: 0,
+                blocoC_cond: 0,
+                entrada: 0,
+                saida: 0,
+                capacidade: 0
+            };
+
+            // Regular table rendering with gender segregation
+            data.forEach((item, index) => {
+                const calculated = calculateTotals(item);
+                
+                // Determine if establishment is female
+                const isFemale = item.estabelecimento.toLowerCase().includes('fem');
+                
+                // Add to appropriate totals
+                const targetTotals = isFemale ? femaleTotals : maleTotals;
+                
+                targetTotals.totalAnterior += calculated.totalAnterior || 0;
+                targetTotals.blocoA_det += calculated.blocoA_det || 0;
+                targetTotals.blocoA_cond += calculated.blocoA_cond || 0;
+                targetTotals.blocoB_det += calculated.blocoB_det || 0;
+                targetTotals.blocoB_cond += calculated.blocoB_cond || 0;
+                targetTotals.blocoC_det += calculated.blocoC_det || 0;
+                targetTotals.blocoC_cond += calculated.blocoC_cond || 0;
+                targetTotals.entrada += calculated.entrada || 0;
+                targetTotals.saida += calculated.saida || 0;
+                targetTotals.capacidade += calculated.capacidade || 0;
+
+                // Render regular row
+                const row = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${calculated.provincia || ''}</td>
+                        <td>${calculated.estabelecimento || ''}</td>
+                        <td>${calculated.totalAnterior || 0}</td>
+                        <td>${calculated.blocoA_det || 0}</td>
+                        <td>${calculated.blocoA_cond || 0}</td>
+                        <td>${calculated.blocoA_total}</td>
+                        <td>${calculated.blocoB_det || 0}</td>
+                        <td>${calculated.blocoB_cond || 0}</td>
+                        <td>${calculated.blocoB_total}</td>
+                        <td>${calculated.blocoC_det || 0}</td>
+                        <td>${calculated.blocoC_cond || 0}</td>
+                        <td>${calculated.blocoC_total}</td>
+                        <td style="font-weight: bold; background-color: #e3f2fd;">${calculated.subTotalPrisaoPreventiva}</td>
+                        <td style="font-weight: bold; background-color: #f3e5f5;">${calculated.subTotalCondenados}</td>
+                        <td style="font-weight: bold; background-color: #e8f5e8;">${calculated.totalAtual}</td>
+                        <td style="color: ${calculated.diferenca >= 0 ? 'green' : 'red'}">${calculated.diferenca}</td>
+                        <td>${calculated.entrada || 0}</td>
+                        <td>${calculated.saida || 0}</td>
+                        <td>${calculated.capacidade || 0}</td>
+                        <td style="color: ${calculated.lotacao > 100 ? 'red' : 'green'}">${calculated.lotacao}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="editRow(${index})" style="padding: 5px 10px; margin-right: 5px;">✏️</button>
+                            <button class="btn btn-danger" onclick="deleteRow(${index})" style="padding: 5px 10px;">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+            // Add male population total row
+            if (data.length > 0) {
+                const maleCalculated = calculateTotals(maleTotals);
+                const maleTotalRow = `
+                    <tr style="background-color: #e3f2fd; font-weight: bold; border-top: 2px solid #2c3e50;">
+                        <td colspan="3" style="text-align: center; background-color: #1565c0; color: white;">TOTAL/POP. MASCULINO</td>
+                        <td>${maleTotals.totalAnterior}</td>
+                        <td>${maleTotals.blocoA_det}</td>
+                        <td>${maleTotals.blocoA_cond}</td>
+                        <td>${maleCalculated.blocoA_total}</td>
+                        <td>${maleTotals.blocoB_det}</td>
+                        <td>${maleTotals.blocoB_cond}</td>
+                        <td>${maleCalculated.blocoB_total}</td>
+                        <td>${maleTotals.blocoC_det}</td>
+                        <td>${maleTotals.blocoC_cond}</td>
+                        <td>${maleCalculated.blocoC_total}</td>
+                        <td>${maleCalculated.subTotalPrisaoPreventiva}</td>
+                        <td>${maleCalculated.subTotalCondenados}</td>
+                        <td>${maleCalculated.totalAtual}</td>
+                        <td>${maleCalculated.diferenca}</td>
+                        <td>${maleTotals.entrada}</td>
+                        <td>${maleTotals.saida}</td>
+                        <td>${maleTotals.capacidade}</td>
+                        <td>${maleCalculated.lotacao}</td>
+                        <td>-</td>
+                    </tr>
+                `;
+                tbody.innerHTML += maleTotalRow;
+
+                // Add female population total row
+                const femaleCalculated = calculateTotals(femaleTotals);
+                const femaleTotalRow = `
+                    <tr style="background-color: #f8bbd0; font-weight: bold;">
+                        <td colspan="3" style="text-align: center; background-color: #c2185b; color: white;">TOTAL/POP. FEMININO</td>
+                        <td>${femaleTotals.totalAnterior}</td>
+                        <td>${femaleTotals.blocoA_det}</td>
+                        <td>${femaleTotals.blocoA_cond}</td>
+                        <td>${femaleCalculated.blocoA_total}</td>
+                        <td>${femaleTotals.blocoB_det}</td>
+                        <td>${femaleTotals.blocoB_cond}</td>
+                        <td>${femaleCalculated.blocoB_total}</td>
+                        <td>${femaleTotals.blocoC_det}</td>
+                        <td>${femaleTotals.blocoC_cond}</td>
+                        <td>${femaleCalculated.blocoC_total}</td>
+                        <td>${femaleCalculated.subTotalPrisaoPreventiva}</td>
+                        <td>${femaleCalculated.subTotalCondenados}</td>
+                        <td>${femaleCalculated.totalAtual}</td>
+                        <td>${femaleCalculated.diferenca}</td>
+                        <td>${femaleTotals.entrada}</td>
+                        <td>${femaleTotals.saida}</td>
+                        <td>${femaleTotals.capacidade}</td>
+                        <td>${femaleCalculated.lotacao}</td>
+                        <td>-</td>
+                    </tr>
+                `;
+                tbody.innerHTML += femaleTotalRow;
+
+                // Add grand total row
+                const grandTotals = {
+                    totalAnterior: maleTotals.totalAnterior + femaleTotals.totalAnterior,
+                    blocoA_det: maleTotals.blocoA_det + femaleTotals.blocoA_det,
+                    blocoA_cond: maleTotals.blocoA_cond + femaleTotals.blocoA_cond,
+                    blocoB_det: maleTotals.blocoB_det + femaleTotals.blocoB_det,
+                    blocoB_cond: maleTotals.blocoB_cond + femaleTotals.blocoB_cond,
+                    blocoC_det: maleTotals.blocoC_det + femaleTotals.blocoC_det,
+                    blocoC_cond: maleTotals.blocoC_cond + femaleTotals.blocoC_cond,
+                    entrada: maleTotals.entrada + femaleTotals.entrada,
+                    saida: maleTotals.saida + femaleTotals.saida,
+                    capacidade: maleTotals.capacidade + femaleTotals.capacidade
+                };
+
+                const grandCalculated = calculateTotals(grandTotals);
+                const grandTotalRow = `
+                    <tr style="background-color: #f8f9fa; border-top: 3px solid #2c3e50; font-weight: bold;">
+                        <td colspan="3" style="background-color: #2c3e50; color: white; text-align: center;">TOTAL GERAL</td>
+                        <td>${grandTotals.totalAnterior}</td>
+                        <td>${grandTotals.blocoA_det}</td>
+                        <td>${grandTotals.blocoA_cond}</td>
+                        <td>${grandCalculated.blocoA_total}</td>
+                        <td>${grandTotals.blocoB_det}</td>
+                        <td>${grandTotals.blocoB_cond}</td>
+                        <td>${grandCalculated.blocoB_total}</td>
+                        <td>${grandTotals.blocoC_det}</td>
+                        <td>${grandTotals.blocoC_cond}</td>
+                        <td>${grandCalculated.blocoC_total}</td>
+                        <td>${grandCalculated.subTotalPrisaoPreventiva}</td>
+                        <td>${grandCalculated.subTotalCondenados}</td>
+                        <td>${grandCalculated.totalAtual}</td>
+                        <td>${grandCalculated.diferenca}</td>
+                        <td>${grandTotals.entrada}</td>
+                        <td>${grandTotals.saida}</td>
+                        <td>${grandTotals.capacidade}</td>
+                        <td>${grandCalculated.lotacao}</td>
+                        <td>-</td>
+                    </tr>
+                `;
+                tbody.innerHTML += grandTotalRow;
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+    const totalEstabelecimentos = data.length;
+    let totalPopulacao = 0;
+    let capacidadeTotal = 0;
+
+    data.forEach(item => {
+        const calculated = calculateTotals(item);
+        totalPopulacao += calculated.totalAtual;
+        capacidadeTotal += item.capacidade || 0;
+    });
+
+    // Calcula o excesso total (não a média)
+    const excessoTotal = totalPopulacao - capacidadeTotal;
+
+    document.getElementById('totalEstabelecimentos').textContent = totalEstabelecimentos;
+    document.getElementById('totalPopulacao').textContent = totalPopulacao.toLocaleString();
+    document.getElementById('capacidadeTotal').textContent = capacidadeTotal.toLocaleString();
+    document.getElementById('lotacaoMedia').textContent = excessoTotal.toLocaleString();
+}
+
+        function addRow() {
+            editingIndex = -1;
+            document.getElementById('modalTitle').textContent = 'Adicionar Estabelecimento';
+            document.getElementById('dataForm').reset();
+            populateProvincias();
+            populateEstabelecimentos('');
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function editRow(index) {
+            editingIndex = index;
+            const item = data[index];
+            document.getElementById('modalTitle').textContent = 'Editar Estabelecimento';
+            
+            populateProvincias();
+            document.getElementById('provincia').value = item.provincia || '';
+            populateEstabelecimentos(item.provincia);
+            document.getElementById('estabelecimento').value = item.estabelecimento || '';
+            document.getElementById('totalAnterior').value = item.totalAnterior || '';
+            document.getElementById('blocoA_det').value = item.blocoA_det || '';
+            document.getElementById('blocoA_cond').value = item.blocoA_cond || '';
+            document.getElementById('blocoB_det').value = item.blocoB_det || '';
+            document.getElementById('blocoB_cond').value = item.blocoB_cond || '';
+            document.getElementById('blocoC_det').value = item.blocoC_det || '';
+            document.getElementById('blocoC_cond').value = item.blocoC_cond || '';
+            document.getElementById('entrada').value = item.entrada || '';
+            document.getElementById('saida').value = item.saida || '';
+            document.getElementById('capacidade').value = item.capacidade || '';
+            
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function deleteRow(index) {
+            if (confirm('Tem certeza que deseja excluir este estabelecimento?')) {
+                data.splice(index, 1);
+                renderTable();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function clearData() {
+            if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+                data = [];
+                renderTable();
+            }
+        }
+
+        document.getElementById('dataForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                provincia: document.getElementById('provincia').value,
+                estabelecimento: document.getElementById('estabelecimento').value,
+                totalAnterior: parseInt(document.getElementById('totalAnterior').value) || 0,
+                blocoA_det: parseInt(document.getElementById('blocoA_det').value) || 0,
+                blocoA_cond: parseInt(document.getElementById('blocoA_cond').value) || 0,
+                blocoB_det: parseInt(document.getElementById('blocoB_det').value) || 0,
+                blocoB_cond: parseInt(document.getElementById('blocoB_cond').value) || 0,
+                blocoC_det: parseInt(document.getElementById('blocoC_det').value) || 0,
+                blocoC_cond: parseInt(document.getElementById('blocoC_cond').value) || 0,
+                entrada: parseInt(document.getElementById('entrada').value) || 0,
+                saida: parseInt(document.getElementById('saida').value) || 0,
+                capacidade: parseInt(document.getElementById('capacidade').value) || 0
+            };
+
+            if (editingIndex >= 0) {
+                data[editingIndex] = formData;
+            } else {
+                data.push(formData);
+            }
+
+            renderTable();
+            closeModal();
+        });
+
+        function exportCSV() {
+            let csv = 'N/O,PROVÍNCIA,ESTABELECIMENTO,TOTAL ANTERIOR,BLOCO A DET,BLOCO A COND,BLOCO A TOTAL,BLOCO B DET,BLOCO B COND,BLOCO B TOTAL,BLOCO C DET,BLOCO C COND,BLOCO C TOTAL,SUB-TOTAL PRISÃO PREVENTIVA,SUB-TOTAL CONDENADOS,TOTAL ACTUAL,DIFERENÇA,ENTRADA,SAÍDA,CAPACIDADE EFECTIVA,LOTAÇÃO\n';
+            
+            data.forEach((item, index) => {
+                const calculated = calculateTotals(item);
+                csv += `${index + 1},"${calculated.provincia}","${calculated.estabelecimento}",${calculated.totalAnterior},${calculated.blocoA_det},${calculated.blocoA_cond},${calculated.blocoA_total},${calculated.blocoB_det},${calculated.blocoB_cond},${calculated.blocoB_total},${calculated.blocoC_det},${calculated.blocoC_cond},${calculated.blocoC_total},${calculated.subTotalPrisaoPreventiva},${calculated.subTotalCondenados},${calculated.totalAtual},${calculated.diferenca},${calculated.entrada},${calculated.saida},${calculated.capacidade},${calculated.lotacao}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dados_penitenciarios_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a3');
+
+            // Prepare table data including totals
+            const tableData = [];
+            
+            // Add regular data
+            data.forEach((item, index) => {
+                const calculated = calculateTotals(item);
+                tableData.push([
+                    index + 1,
+                    calculated.provincia,
+                    calculated.estabelecimento,
+                    calculated.totalAnterior,
+                    calculated.blocoA_det,
+                    calculated.blocoA_cond,
+                    calculated.blocoA_total,
+                    calculated.blocoB_det,
+                    calculated.blocoB_cond,
+                    calculated.blocoB_total,
+                    calculated.blocoC_det,
+                    calculated.blocoC_cond,
+                    calculated.blocoC_total,
+                    calculated.subTotalPrisaoPreventiva,
+                    calculated.subTotalCondenados,
+                    calculated.totalAtual,
+                    calculated.diferenca,
+                    calculated.entrada,
+                    calculated.saida,
+                    calculated.capacidade,
+                    calculated.lotacao
+                ]);
+            });
+
+            // Calculate gender totals
+            let maleTotals = {
+                totalAnterior: 0, blocoA_det: 0, blocoA_cond: 0,
+                blocoB_det: 0, blocoB_cond: 0, blocoC_det: 0,
+                blocoC_cond: 0, entrada: 0, saida: 0, capacidade: 0
+            };
+            let femaleTotals = { ...maleTotals };
+
+            data.forEach(item => {
+                const calculated = calculateTotals(item);
+                const isFemale = item.estabelecimento.toLowerCase().includes('fem');
+                const targetTotals = isFemale ? femaleTotals : maleTotals;
+                
+                Object.keys(targetTotals).forEach(key => {
+                    targetTotals[key] += calculated[key] || 0;
+                });
+            });
+
+            // Calculate all totals
+            const maleCalculated = calculateTotals(maleTotals);
+            const femaleCalculated = calculateTotals(femaleTotals);
+            const grandTotals = {
+                totalAnterior: maleTotals.totalAnterior + femaleTotals.totalAnterior,
+                blocoA_det: maleTotals.blocoA_det + femaleTotals.blocoA_det,
+                blocoA_cond: maleTotals.blocoA_cond + femaleTotals.blocoA_cond,
+                blocoB_det: maleTotals.blocoB_det + femaleTotals.blocoB_det,
+                blocoB_cond: maleTotals.blocoB_cond + femaleTotals.blocoB_cond,
+                blocoC_det: maleTotals.blocoC_det + femaleTotals.blocoC_det,
+                blocoC_cond: maleTotals.blocoC_cond + femaleTotals.blocoC_cond,
+                entrada: maleTotals.entrada + femaleTotals.entrada,
+                saida: maleTotals.saida + femaleTotals.saida,
+                capacidade: maleTotals.capacidade + femaleTotals.capacidade
+            };
+            const grandCalculated = calculateTotals(grandTotals);
+
+            // Add total rows
+            [
+                ['TOTAL/POP. MASCULINO', maleCalculated, maleTotals],
+                ['TOTAL/POP. FEMININO', femaleCalculated, femaleTotals],
+                ['TOTAL GERAL', grandCalculated, grandTotals]
+            ].forEach(([label, calc, totals]) => {
+                tableData.push([
+                    '', '', label, totals.totalAnterior,
+                    totals.blocoA_det, totals.blocoA_cond, calc.blocoA_total,
+                    totals.blocoB_det, totals.blocoB_cond, calc.blocoB_total,
+                    totals.blocoC_det, totals.blocoC_cond, calc.blocoC_total,
+                    calc.subTotalPrisaoPreventiva, calc.subTotalCondenados,
+                    calc.totalAtual, calc.diferenca, totals.entrada,
+                    totals.saida, totals.capacidade, calc.lotacao
+                ]);
+            });
+
+            // Configure table with complex header
+            doc.autoTable({
+                head: [
+                    [
+                        { content: 'N/O', rowSpan: 3 },
+                        { content: 'PROVÍNCIAS', rowSpan: 3 },
+                        { content: 'ESTABELECIMENTO', rowSpan: 3 },
+                        { content: 'TOTAL ANTERIOR', rowSpan: 3 },
+                        { content: 'DISTRIBUIÇÃO DA POPULAÇÃO PENAL POR FAMÍLIA CRIMINAL', colSpan: 9 },
+                        { content: 'SUB-TOTAL PRISÃO PREVENTIVA', rowSpan: 3 },
+                        { content: 'SUB-TOTAL CONDENADOS', rowSpan: 3 },
+                        { content: 'TOTAL ACTUAL', rowSpan: 3 },
+                        { content: 'DIFERENÇA', rowSpan: 3 },
+                        { content: 'ENTRADA', rowSpan: 3 },
+                        { content: 'SAÍDA', rowSpan: 3 },
+                        { content: 'CAPACIDADE EFECTIVA', rowSpan: 3 },
+                        { content: 'LOTAÇÃO', rowSpan: 3 }
+                    ],
+                    [
+                        { content: 'BLOCO A - Crime contra pessoa', colSpan: 3 },
+                        { content: 'BLOCO B - Crime contra propriedade', colSpan: 3 },
+                        { content: 'BLOCO C - Crime contra ordem pública', colSpan: 3 }
+                    ],
+                    ['DET.', 'Cond.', 'Total', 'DET.', 'Cond.', 'Total', 'DET.', 'Cond.', 'Total']
+                ],
+                body: tableData,
+                startY: 20,
+                styles: { 
+                    fontSize: 6,
+                    cellPadding: 1,
+                    halign: 'center'
+                },
+                headStyles: { 
+                    fillColor: [44, 62, 80],
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                didParseCell: function(data) {
+                    const totalRowColors = [
+                        [227, 242, 253], // Male - Light blue
+                        [248, 187, 208], // Female - Light pink
+                        [248, 249, 250]  // Grand total - Light gray
+                    ];
+                    
+                    if (data.row.index >= tableData.length - 3) {
+                        const colorIndex = data.row.index - (tableData.length - 3);
+                        data.cell.styles.fillColor = totalRowColors[colorIndex];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            doc.save(`relatorio_penitenciario_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+
+        function populateProvincias() {
+            const provinciaSelect = document.getElementById('provincia');
+            provinciaSelect.innerHTML = '<option value="">Selecione uma província</option>';
+            Object.keys(estabelecimentosPorProvincia).forEach(provincia => {
+                const option = document.createElement('option');
+                option.value = provincia;
+                option.textContent = provincia;
+                provinciaSelect.appendChild(option);
+            });
+        }
+
+        function populateEstabelecimentos(provincia) {
+            const estabelecimentoSelect = document.getElementById('estabelecimento');
+            estabelecimentoSelect.innerHTML = '<option value="">Selecione um estabelecimento</option>';
+    
+            if (provincia && estabelecimentosPorProvincia[provincia]) {
+                estabelecimentosPorProvincia[provincia].forEach(estabelecimento => {
+                    // Verifica se o estabelecimento não está vazio
+                    if (estabelecimento) {
+                        const option = document.createElement('option');
+                        option.value = estabelecimento;
+                        option.textContent = estabelecimento;
+                        estabelecimentoSelect.appendChild(option);
+                    }
+                });
+                estabelecimentoSelect.disabled = false;
+            } else {
+                estabelecimentoSelect.disabled = true;
+                estabelecimentoSelect.innerHTML = '<option value="">Selecione primeiro uma província</option>';
+            }
+        }
+
+        // Adicione também um event listener para o select de província
+document.getElementById('provincia').addEventListener('change', function(e) {
+    populateEstabelecimentos(e.target.value);
+});
+
+        function showAnalytics() {
+            document.getElementById('analyticsModal').style.display = 'block';
+            renderCharts();
+        }
+
+        function closeAnalyticsModal() {
+            document.getElementById('analyticsModal').style.display = 'none';
+            Object.values(charts).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+    // Reset chart references
+    charts = {
+        genderChart: null,
+        occupancyChart: null,
+        crimeTypeChart: null,
+        detentionStatusChart: null
+    };
+        }
+
+        function renderCharts() {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+
+            // Processamento dos dados
+            let maleCount = 0;
+            let femaleCount = 0;
+            let totalCapacity = 0;
+            let totalOccupancy = 0;
+            let crimeTypes = {
+                pessoaDet: 0,
+                pessoaCond: 0,
+                propriedadeDet: 0,
+                propriedadeCond: 0,
+                ordemDet: 0,
+                ordemCond: 0
+            };
+            let detentionStatus = {
+                preventiva: 0,
+                condenados: 0
+            };
+
+            data.forEach(item => {
+                const isFemale = item.estabelecimento.toLowerCase().includes('fem');
+                const calculated = calculateTotals(item);
+                
+                if (isFemale) {
+                    femaleCount += calculated.totalAtual;
+                } else {
+                    maleCount += calculated.totalAtual;
+                }
+
+                totalCapacity += item.capacidade || 0;
+                totalOccupancy += calculated.totalAtual;
+
+                // Crime types
+                crimeTypes.pessoaDet += item.blocoA_det || 0;
+                crimeTypes.pessoaCond += item.blocoA_cond || 0;
+                crimeTypes.propriedadeDet += item.blocoB_det || 0;
+                crimeTypes.propriedadeCond += item.blocoB_cond || 0;
+                crimeTypes.ordemDet += item.blocoC_det || 0;
+                crimeTypes.ordemCond += item.blocoC_cond || 0;
+
+                detentionStatus.preventiva += calculated.subTotalPrisaoPreventiva;
+                detentionStatus.condenados += calculated.subTotalCondenados;
+            });
+
+            // Gráfico de Gênero
+            charts.genderChart = new Chart(document.getElementById('genderChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Masculino', 'Feminino'],
+                    datasets: [{
+                        data: [maleCount, femaleCount],
+                        backgroundColor: ['#1565c0', '#c2185b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuição por Gênero'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Lotação
+            charts.occupancyChart = new Chart(document.getElementById('occupancyChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Capacidade', 'Ocupação Atual'],
+                    datasets: [{
+                        data: [totalCapacity, totalOccupancy],
+                        backgroundColor: ['#4CAF50', totalOccupancy > totalCapacity ? '#f44336' : '#4CAF50']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Capacidade vs Ocupação'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Tipos de Crime
+            charts.crimeTypeChart = new Chart(document.getElementById('crimeTypeChart'), {
+                type: 'radar',
+                data: {
+                    labels: ['Crimes contra Pessoa', 'Crimes contra Propriedade', 'Crimes contra Ordem Pública'],
+                    datasets: [{
+                        label: 'Detidos',
+                        data: [crimeTypes.pessoaDet, crimeTypes.propriedadeDet, crimeTypes.ordemDet],
+                        backgroundColor: 'rgba(21, 101, 192, 0.2)',
+                        borderColor: '#1565c0'
+                    },
+                    {
+                        label: 'Condenados',
+                        data: [crimeTypes.pessoaCond, crimeTypes.propriedadeCond, crimeTypes.ordemCond],
+                        backgroundColor: 'rgba(194, 24, 91, 0.2)',
+                        borderColor: '#c2185b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuição por Tipo de Crime'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Status da Detenção
+            charts.detentionStatusChart = new Chart(document.getElementById('detentionStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Prisão Preventiva', 'Condenados'],
+                    datasets: [{
+                        data: [detentionStatus.preventiva, detentionStatus.condenados],
+                        backgroundColor: ['#2196F3', '#FF9800']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Status da Detenção'
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = function() {
+    renderTable();
+};
+    </script>
+</body>
+</html>
